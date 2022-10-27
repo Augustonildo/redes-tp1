@@ -8,3 +8,9 @@ server: server.c
 
 clean:
 	rm client server
+
+valgrind_client:
+	valgrind --leak-check=yes --log-file=valgrind.rpt client
+
+valgrind_server:
+	valgrind --leak-check=yes --log-file=valgrind.rpt server
