@@ -14,3 +14,7 @@ valgrind_client:
 
 valgrind_server:
 	valgrind --leak-check=yes --log-file=valgrind.rpt server
+
+run:
+	./client 
+	./server
