@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     socklen_t caddrlen = sizeof(cstorage);
 
     int csock = accept(s, caddr, &caddrlen);
-    if (0 != csock)
+    if (csock == -1)
     {
       logexit("accept");
     }
