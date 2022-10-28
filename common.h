@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 
+#define BUFSZ 1024
+
 void logexit(const char *msg);
 int addrparse(const char *addrstr, const char *portstr,
               struct sockaddr_storage *storage);

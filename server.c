@@ -5,8 +5,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#define BUFSZ 1024
-
 int main(int argc, char *argv[])
 {
   struct sockaddr_storage storage;
