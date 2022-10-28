@@ -1,16 +1,16 @@
-all: client server common
+all: common client server 
 
 client: client.c
-	gcc client.c -o client
+	gcc -Wall client.c common.o -o client
 
 server: server.c
-	gcc server.c -o server
+	gcc -Wall server.c common.o -o server
 
 common: common.c
-	gcc common.c -o common
+	gcc -Wall -c common.c
 
 clean:
-	rm client server
+	rm common.o client server
 
 valgrind_client:
 	valgrind --leak-check=yes --log-file=valgrind.rpt client
