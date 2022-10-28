@@ -1,10 +1,13 @@
-all: client server
+all: client server common
 
 client: client.c
 	gcc client.c -o client
 
 server: server.c
 	gcc server.c -o server
+
+common: common.c
+	gcc common.c -o common
 
 clean:
 	rm client server
