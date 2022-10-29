@@ -52,7 +52,7 @@ int closeHandler(char *command)
 
 int endCommandHandler(char *splittedCommand)
 {
-  splittedCommand = strtok(NULL, " ,.-");
+  splittedCommand = strtok(NULL, " ");
   if (splittedCommand != NULL)
   {
     return closeHandler(splittedCommand);
@@ -62,14 +62,14 @@ int endCommandHandler(char *splittedCommand)
 
 int addHandler(char *splittedCommand, struct rack *racks)
 {
-  splittedCommand = strtok(NULL, " ,.-");
+  splittedCommand = strtok(NULL, " ");
   if (!strcmp(splittedCommand, "sw") == 0)
     return closeHandler(splittedCommand);
 
   int addList[RACK_SIZE_LIMIT];
   int countAdd = 0;
 
-  splittedCommand = strtok(NULL, " ,.-");
+  splittedCommand = strtok(NULL, " ");
   while (strcmp(splittedCommand, "in") != 0 && countAdd < RACK_SIZE_LIMIT)
   {
     addList[countAdd] = atoi(splittedCommand) - 1;
@@ -77,17 +77,17 @@ int addHandler(char *splittedCommand, struct rack *racks)
       return 0;
     countAdd++;
 
-    splittedCommand = strtok(NULL, " ,.-");
+    splittedCommand = strtok(NULL, " ");
   }
 
-  splittedCommand = strtok(NULL, " ,.-");
+  splittedCommand = strtok(NULL, " ");
   int rackId = atoi(splittedCommand) - 1;
   if (!isValidRack(rackId + 1))
     return 0;
 
   if (racks[rackId].switchCount + countAdd > RACK_SIZE_LIMIT)
   {
-    printf("error rack limit exceeded");
+    printf("error rack limit exceeded\n");
     return 0;
   }
 
@@ -114,12 +114,44 @@ int addHandler(char *splittedCommand, struct rack *racks)
   return 0;
 }
 
+int rmHandler(char *splittedCommand, struct rack *racks)
+{
+  splittedCommand = strtok(NULL, " ");
+  if (!strcmp(splittedCommand, "sw") == 0)
+    return closeHandler(splittedCommand);
+
+  splittedCommand = strtok(NULL, " ");
+  int switchId = atoi(splittedCommand) - 1;
+  if (!isValidSwitch(switchId + 1))
+    return 0;
+
+  splittedCommand = strtok(NULL, " ");
+  if (!strcmp(splittedCommand, "in") == 0)
+    return closeHandler(splittedCommand);
+
+  splittedCommand = strtok(NULL, " ");
+  int rackId = atoi(splittedCommand) - 1;
+  if (!isValidRack(rackId + 1))
+    return 0;
+
+  if (!racks[rackId].installedSwitches[switchId])
+  {
+    printf("error switch doesn't exist\n");
+    return 0;
+  }
+
+  racks[rackId].switchCount--;
+  racks[rackId].installedSwitches[switchId] = 0;
+  printf("switch 0%d removed from 0%d\n", switchId + 1, rackId + 1);
+  return endCommandHandler(splittedCommand);
+}
+
 int getHandler(char *splittedCommand, struct rack *racks)
 {
   int getList[MULTIPLE_SWITCH_GET];
   int countGet = 0;
 
-  splittedCommand = strtok(NULL, " ,.-");
+  splittedCommand = strtok(NULL, " ");
   while (strcmp(splittedCommand, "in") != 0 && countGet < MULTIPLE_SWITCH_GET)
   {
     getList[countGet] = atoi(splittedCommand) - 1;
@@ -127,13 +159,13 @@ int getHandler(char *splittedCommand, struct rack *racks)
       return 0;
     countGet++;
 
-    splittedCommand = strtok(NULL, " ,.-");
+    splittedCommand = strtok(NULL, " ");
   }
 
   if (countGet == 0)
     return closeHandler(splittedCommand);
 
-  splittedCommand = strtok(NULL, " ,.-");
+  splittedCommand = strtok(NULL, " ");
   int rackId = atoi(splittedCommand) - 1;
   if (!isValidRack(rackId + 1))
     return 0;
@@ -156,7 +188,7 @@ int getHandler(char *splittedCommand, struct rack *racks)
 
 int lsHandler(char *splittedCommand, struct rack *racks)
 {
-  splittedCommand = strtok(NULL, " ,.-");
+  splittedCommand = strtok(NULL, " ");
   int rackId = atoi(splittedCommand) - 1;
   if (!isValidRack(rackId + 1))
     return 0;
@@ -194,7 +226,7 @@ int handleCommands(char *buf, struct rack *racks)
   }
   else if (strcmp(splittedCommand, "rm") == 0)
   {
-    printf("A rm!\n");
+    return rmHandler(splittedCommand, racks);
   }
   else if (strcmp(splittedCommand, "get") == 0)
   {
@@ -271,7 +303,6 @@ int main(int argc, char *argv[])
       memset(buf, 0, BUFSZ);
       size_t count = recv(csock, buf, BUFSZ - 1, 0);
       buf[strcspn(buf, "\n")] = 0;
-      printf("[msg] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
 
       int resultHandler = handleCommands(buf, racks);
       count = send(csock, buf, strlen(buf) + 1, 0);
