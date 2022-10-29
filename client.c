@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
     {
       break; // Connection terminated
     }
+    printf("%s\n", buf);
     count = 0;
   }
 

@@ -10,61 +10,58 @@
 #define MAX_SWITCH_TYPES 4
 #define MULTIPLE_SWITCH_GET 2
 
-struct rack
+typedef struct rack
 {
+  int initialized;
   int switchCount;
   int installedSwitches[MAX_SWITCH_TYPES];
-};
+} rack;
 
-int isValidRack(int rackId)
+typedef struct response
 {
-  if (rackId < 1 || rackId > MAX_RACK_NUMBER)
-  {
-    printf("error rack doesn't exist\n");
-    return 0;
-  }
-  return 1;
+  char message[BUFSZ];
+  int endConnection;
+} response;
+
+response exitHandler()
+{
+  response response;
+  memset(response.message, 0, BUFSZ);
+  response.endConnection = 1;
+  return response;
 }
 
-int isValidSwitch(int switchId)
+response resolveHandler(char *message)
 {
-  if (switchId < 1 || switchId > MAX_SWITCH_TYPES)
-  {
-    printf("error switch type unknown\n");
-    return 0;
-  }
-  return 1;
+  response response;
+  strcpy(response.message, message);
+  response.endConnection = 0;
+  return response;
 }
 
-int closeHandler(char *command)
-{
-  if (strcmp(command, "exit") == 0)
-  {
-    printf("Ok! An exit!\n");
-  }
-  else
-  {
-    printf("[What?] %s\n", command);
-  }
-
-  return -1;
-}
-
-int endCommandHandler(char *splittedCommand)
+response endCommandHandler(char *splittedCommand, char *message)
 {
   splittedCommand = strtok(NULL, " ");
   if (splittedCommand != NULL)
-  {
-    return closeHandler(splittedCommand);
-  }
-  return 0;
+    return exitHandler();
+  return resolveHandler(message);
 }
 
-int addHandler(char *splittedCommand, struct rack *racks)
+int isInvalidRack(int rackId)
+{
+  return (rackId < 1 || rackId > MAX_RACK_NUMBER);
+}
+
+int isInvalidSwitch(int switchId)
+{
+  return (switchId < 1 || switchId > MAX_SWITCH_TYPES);
+}
+
+response addHandler(char *splittedCommand, rack *racks)
 {
   splittedCommand = strtok(NULL, " ");
   if (!strcmp(splittedCommand, "sw") == 0)
-    return closeHandler(splittedCommand);
+    return exitHandler();
 
   int addList[RACK_SIZE_LIMIT];
   int countAdd = 0;
@@ -74,13 +71,12 @@ int addHandler(char *splittedCommand, struct rack *racks)
   {
     if (countAdd >= RACK_SIZE_LIMIT)
     {
-      printf("error rack limit exceeded\n");
-      return 0;
+      return resolveHandler("error rack limit exceeded\n");
     }
 
     addList[countAdd] = atoi(splittedCommand) - 1;
-    if (!isValidSwitch(addList[countAdd] + 1))
-      return 0;
+    if (isInvalidSwitch(addList[countAdd] + 1))
+      return resolveHandler("error switch type unknown\n");
     countAdd++;
 
     splittedCommand = strtok(NULL, " ");
@@ -88,71 +84,75 @@ int addHandler(char *splittedCommand, struct rack *racks)
 
   splittedCommand = strtok(NULL, " ");
   int rackId = atoi(splittedCommand) - 1;
-  if (!isValidRack(rackId + 1))
-    return 0;
+  if (isInvalidRack(rackId + 1))
+    return resolveHandler("error rack doesn't exist\n");
 
   if (racks[rackId].switchCount + countAdd > RACK_SIZE_LIMIT)
   {
-    printf("error rack limit exceeded\n");
-    return 0;
+    return resolveHandler("error rack limit exceeded\n");
   }
 
+  char msg[BUFSZ];
+  memset(msg, 0, BUFSZ);
+  int bufferIndex = 0;
   for (int i = 0; i < countAdd; i++)
   {
     if (racks[rackId].installedSwitches[addList[i]])
     {
-      printf("error switch 0%d already installed in 0%d\n", addList[i] + 1, rackId + 1);
-      return 0;
+      sprintf(msg, "error switch 0%d already installed in 0%d\n", addList[i] + 1, rackId + 1);
+      return resolveHandler(msg);
     }
     else
     {
+      racks[rackId].initialized = 1;
       racks[rackId].installedSwitches[addList[i]] = 1;
       racks[rackId].switchCount++;
     }
   }
 
-  printf("switch ");
+  bufferIndex += sprintf(msg, "switch ");
   for (int i = 0; i < countAdd; i++)
   {
-    printf("0%d ", addList[i] + 1);
+    bufferIndex += sprintf(&msg[bufferIndex], "0%d ", addList[i] + 1);
   }
-  printf("installed\n");
-  return 0;
+  bufferIndex += sprintf(&msg[bufferIndex], "installed\n");
+  return endCommandHandler(splittedCommand, msg);
 }
 
-int rmHandler(char *splittedCommand, struct rack *racks)
+response rmHandler(char *splittedCommand, rack *racks)
 {
   splittedCommand = strtok(NULL, " ");
   if (!strcmp(splittedCommand, "sw") == 0)
-    return closeHandler(splittedCommand);
+    return exitHandler();
 
   splittedCommand = strtok(NULL, " ");
   int switchId = atoi(splittedCommand) - 1;
-  if (!isValidSwitch(switchId + 1))
-    return 0;
+  if (isInvalidSwitch(switchId + 1))
+    return resolveHandler("error switch type unknown\n");
 
   splittedCommand = strtok(NULL, " ");
   if (!strcmp(splittedCommand, "in") == 0)
-    return closeHandler(splittedCommand);
+    return exitHandler();
 
   splittedCommand = strtok(NULL, " ");
   int rackId = atoi(splittedCommand) - 1;
-  if (!isValidRack(rackId + 1))
-    return 0;
+  if (isInvalidRack(rackId + 1))
+    return resolveHandler("error rack doesn't exist\n");
 
   if (!racks[rackId].installedSwitches[switchId])
   {
-    printf("error switch doesn't exist\n");
-    return 0;
+    return resolveHandler("error switch doesn't exist\n");
   }
 
   racks[rackId].switchCount--;
   racks[rackId].installedSwitches[switchId] = 0;
-  printf("switch 0%d removed from 0%d\n", switchId + 1, rackId + 1);
-  return endCommandHandler(splittedCommand);
+
+  char msg[BUFSZ];
+  sprintf(msg, "switch 0%d removed from 0%d\n", switchId + 1, rackId + 1);
+  return endCommandHandler(splittedCommand, msg);
 }
 
-int getHandler(char *splittedCommand, struct rack *racks)
+response getHandler(char *splittedCommand, rack *racks)
 {
   int getList[MULTIPLE_SWITCH_GET];
   int countGet = 0;
@@ -161,68 +161,77 @@ int getHandler(char *splittedCommand, struct rack *racks)
   while (strcmp(splittedCommand, "in") != 0 && countGet < MULTIPLE_SWITCH_GET)
   {
     getList[countGet] = atoi(splittedCommand) - 1;
-    if (!isValidSwitch(getList[countGet] + 1))
-      return 0;
+    if (isInvalidSwitch(getList[countGet] + 1))
+      return resolveHandler("error switch type unknown\n");
     countGet++;
 
     splittedCommand = strtok(NULL, " ");
   }
 
   if (countGet == 0)
-    return closeHandler(splittedCommand);
+    return exitHandler();
 
   splittedCommand = strtok(NULL, " ");
   int rackId = atoi(splittedCommand) - 1;
-  if (!isValidRack(rackId + 1))
-    return 0;
+  if (isInvalidRack(rackId + 1))
+    return resolveHandler("error rack doesn't exist\n");
 
+  char msg[BUFSZ];
+  memset(msg, 0, BUFSZ);
+  int bufferIndex = 0;
   for (int i = 0; i < countGet; i++)
   {
     if (!racks[rackId].installedSwitches[getList[i]])
     {
-      printf("error switch doesn't exist");
-      return 0;
+      return resolveHandler("error switch doesn't exist\n");
     }
     else
     {
-      printf("%d Kbs ", rand() % (5000)); // Arbitrary limit for rand
+      bufferIndex += sprintf(&msg[bufferIndex], "%d Kbs ", rand() % (5000)); // Arbitrary limit for rand
     }
   }
-  printf("\n");
-  return 0;
+  bufferIndex += sprintf(&msg[bufferIndex], "\n");
+  return endCommandHandler(splittedCommand, msg);
 }
 
-int lsHandler(char *splittedCommand, struct rack *racks)
+response lsHandler(char *splittedCommand, rack *racks)
 {
   splittedCommand = strtok(NULL, " ");
   int rackId = atoi(splittedCommand) - 1;
-  if (!isValidRack(rackId + 1))
-    return 0;
+  if (isInvalidRack(rackId + 1))
+    return resolveHandler("error rack doesn't exist\n");
+
+  if (racks[rackId].initialized == 0)
+  {
+    return resolveHandler("error rack doesn't exist\n");
+  }
 
   if (racks[rackId].switchCount == 0)
   {
-    printf("empty rack\n");
-    return 0;
+    return resolveHandler("empty rack\n");
   }
 
+  char msg[BUFSZ];
+  memset(msg, 0, BUFSZ);
+  int bufferIndex = 0;
   for (int i = 0; i < MAX_SWITCH_TYPES; i++)
   {
     int found = 0;
     if (racks[rackId].installedSwitches[i])
     {
       found++;
-      printf("0%d", i + 1);
+      bufferIndex += sprintf(&msg[bufferIndex], "0%d", i + 1);
       if (found != racks[rackId].switchCount)
       {
-        printf(" ");
+        bufferIndex += sprintf(&msg[bufferIndex], " ");
       }
     }
   }
-  printf("\n");
-  return endCommandHandler(splittedCommand);
+  bufferIndex += sprintf(&msg[bufferIndex], "\n");
+  return endCommandHandler(splittedCommand, msg);
 }
 
-int handleCommands(char *buf, struct rack *racks)
+response handleCommands(char *buf, rack *racks)
 {
   char *splittedCommand = strtok(buf, " ");
 
@@ -244,15 +253,15 @@ int handleCommands(char *buf, struct rack *racks)
   }
   else
   {
-    return closeHandler(splittedCommand);
+    return exitHandler();
   }
-  return 0;
 }
 
-void initializeRacks(struct rack *racks)
+void initializeRacks(rack *racks)
 {
   for (int i = 0; i < MAX_RACK_NUMBER; i++)
   {
+    racks[i].initialized = 0;
     racks[i].switchCount = 0;
     for (int j = 0; j < MAX_SWITCH_TYPES; j++)
     {
@@ -286,7 +295,7 @@ int main(int argc, char *argv[])
   char addrstr[BUFSZ];
   addrtostr(addr, addrstr, BUFSZ);
 
-  struct rack racks[MAX_RACK_NUMBER];
+  rack racks[MAX_RACK_NUMBER];
   initializeRacks(racks);
   while (1)
   {
@@ -310,15 +319,19 @@ int main(int argc, char *argv[])
       size_t count = recv(csock, buf, BUFSZ - 1, 0);
       buf[strcspn(buf, "\n")] = 0;
 
-      int resultHandler = handleCommands(buf, racks);
-      count = send(csock, buf, strlen(buf) + 1, 0);
-      if (count != strlen(buf) + 1)
+      response response;
+      memset(response.message, 0, BUFSZ);
+
+      response = handleCommands(buf, racks);
+      count = send(csock, response.message, strlen(response.message) + 1, 0);
+      if (count != strlen(response.message) + 1)
       {
         logexit("send");
       }
 
-      if (resultHandler != 0)
+      if (response.endConnection)
       {
+        printf("Encerra a conexão\n");
         close(csock);
       }
     }
