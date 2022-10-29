@@ -5,6 +5,53 @@
 #include <string.h>
 #include <unistd.h>
 
+int closeHandler(char *command)
+{
+  if (strcmp(command, "exit") == 0)
+  {
+    printf("Ok! An exit!\n");
+  }
+  else
+  {
+    printf("[What?] %s\n", command);
+  }
+
+  return -1;
+}
+
+int handleCommands(char *buf)
+{
+  char *splittedCommand = strtok(buf, " ");
+  while (splittedCommand != NULL)
+  {
+    printf("[TESTE] Next command: %s\n", splittedCommand);
+
+    if (strcmp(splittedCommand, "add") == 0)
+    {
+      printf("An add!\n");
+    }
+    else if (strcmp(splittedCommand, "rm") == 0)
+    {
+      printf("A rm!\n");
+    }
+    else if (strcmp(splittedCommand, "get") == 0)
+    {
+      printf("A get!\n");
+    }
+    else if (strcmp(splittedCommand, "ls") == 0)
+    {
+      printf("A ls!\n");
+    }
+    else
+    {
+      return closeHandler(splittedCommand);
+    }
+
+    splittedCommand = strtok(NULL, " ,.-");
+  }
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   struct sockaddr_storage storage;
@@ -50,22 +97,20 @@ int main(int argc, char *argv[])
     {
       memset(buf, 0, BUFSZ);
       size_t count = recv(csock, buf, BUFSZ - 1, 0);
+      buf[strcspn(buf, "\n")] = 0;
       printf("[msg] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
 
-      char *splittedCommand = strtok(buf, " ");
-      while (splittedCommand != NULL)
-      {
-        printf("[TESTE] Next command: %s\n", splittedCommand);
-
-        // TODO: HANDLE COMMANDS
-
-        splittedCommand = strtok(NULL, " ,.-");
-      }
-
+      int resultHandler = handleCommands(buf);
+      printf("[Result handler] %d\n", resultHandler);
       count = send(csock, buf, strlen(buf) + 1, 0);
       if (count != strlen(buf) + 1)
       {
         logexit("send");
+      }
+
+      if (resultHandler != 0)
+      {
+        close(csock);
       }
     }
   }
