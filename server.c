@@ -6,14 +6,35 @@
 #include <unistd.h>
 
 #define MAX_RACK_NUMBER 4
-#define MAX_RACK_SIZE 3
-#define SWITCH_TYPES 4
+#define RACK_SIZE_LIMIT 3
+#define MAX_SWITCH_TYPES 4
+#define MULTIPLE_SWITCH_GET 2
 
 struct rack
 {
   int switchCount;
-  int installedSwitches[SWITCH_TYPES];
+  int installedSwitches[MAX_SWITCH_TYPES];
 };
+
+int isValidRack(int rackId)
+{
+  if (rackId < 1 || rackId > MAX_RACK_NUMBER)
+  {
+    printf("error rack doesn't exist\n");
+    return -1;
+  }
+  return 1;
+}
+
+int isValidSwitch(int switchId)
+{
+  if (switchId < 1 || switchId > MAX_SWITCH_TYPES)
+  {
+    printf("error switch doesn't exist\n");
+    return -1;
+  }
+  return 1;
+}
 
 int closeHandler(char *command)
 {
@@ -41,17 +62,14 @@ int endCommandHandler(char *splittedCommand)
 
 int addHandler(char *splittedCommand)
 {
-  printf("An add!\n");
   splittedCommand = strtok(NULL, " ,.-");
   if (strcmp(splittedCommand, "sw") == 0)
   {
-    printf("An sw!\n");
     splittedCommand = strtok(NULL, " ,.-");
     int switchId = atoi(splittedCommand);
-    if (switchId < 1 || switchId > SWITCH_TYPES)
-    {
+    if (!isValidSwitch(switchId))
       closeHandler(splittedCommand);
-    }
+
     printf("Switch %d installed", switchId);
   }
   else
@@ -61,16 +79,53 @@ int addHandler(char *splittedCommand)
   return 0;
 }
 
+int getHandler(char *splittedCommand, struct rack *racks)
+{
+  int getList[MULTIPLE_SWITCH_GET];
+  int countGet = 0;
+
+  splittedCommand = strtok(NULL, " ,.-");
+  while (strcmp(splittedCommand, "in") != 0 && countGet < MULTIPLE_SWITCH_GET)
+  {
+    getList[countGet] = atoi(splittedCommand);
+    if (!isValidSwitch(getList[countGet]))
+      return 0;
+    countGet++;
+
+    splittedCommand = strtok(NULL, " ,.-");
+  }
+
+  if (countGet == 0)
+    return closeHandler(splittedCommand);
+
+  splittedCommand = strtok(NULL, " ,.-");
+  int rackId = atoi(splittedCommand);
+  if (!isValidRack(rackId))
+    return 0;
+
+  for (int i = 0; i < countGet; i++)
+  {
+    if (!racks[rackId].installedSwitches[getList[i]])
+    {
+      printf("error switch doesn't exist");
+      return 0;
+    }
+    else
+    {
+      printf("%d Kbs ", rand() % (5000)); // Arbitrary limit for rand
+    }
+  }
+  printf("\n");
+  return 0;
+}
+
 int lsHandler(char *splittedCommand, struct rack *racks)
 {
   splittedCommand = strtok(NULL, " ,.-");
   int rackId = atoi(splittedCommand);
   printf("%d\n", rackId);
-  if (rackId < 1 || rackId > MAX_RACK_NUMBER)
-  {
-    printf("error rack doesn't exist\n");
+  if (!isValidRack(rackId))
     return 0;
-  }
 
   if (racks[rackId - 1].switchCount == 0)
   {
@@ -78,7 +133,7 @@ int lsHandler(char *splittedCommand, struct rack *racks)
     return 0;
   }
 
-  for (int i = 0; i < MAX_RACK_SIZE; i++)
+  for (int i = 0; i < MAX_SWITCH_TYPES; i++)
   {
     int found = 0;
     if (racks[rackId - 1].installedSwitches[i])
@@ -113,7 +168,7 @@ int handleCommands(char *buf, struct rack *racks)
   }
   else if (strcmp(splittedCommand, "get") == 0)
   {
-    printf("A get!\n");
+    return getHandler(splittedCommand, racks);
   }
   else if (strcmp(splittedCommand, "ls") == 0)
   {
@@ -131,7 +186,7 @@ void initializeRacks(struct rack *racks)
   for (int i = 0; i < MAX_RACK_NUMBER; i++)
   {
     racks[i].switchCount = 0;
-    for (int j = 0; j < MAX_RACK_SIZE; j++)
+    for (int j = 0; j < MAX_SWITCH_TYPES; j++)
     {
       racks[i].installedSwitches[j] = 0;
     }
@@ -189,7 +244,6 @@ int main(int argc, char *argv[])
       printf("[msg] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
 
       int resultHandler = handleCommands(buf, racks);
-      printf("[Result handler] %d\n", resultHandler);
       count = send(csock, buf, strlen(buf) + 1, 0);
       if (count != strlen(buf) + 1)
       {
