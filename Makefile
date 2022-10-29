@@ -12,12 +12,6 @@ common: common.c
 clean:
 	rm common.o client server
 
-valgrind_client:
-	valgrind --leak-check=yes --log-file=valgrind.rpt client
-
-valgrind_server:
-	valgrind --leak-check=yes --log-file=valgrind.rpt server
-
 run_server_v4:
 	./server v4 51511
 

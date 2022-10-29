@@ -331,8 +331,8 @@ int main(int argc, char *argv[])
 
       if (response.endConnection)
       {
-        printf("Encerra a conexão\n");
         close(csock);
+        break;
       }
     }
   }

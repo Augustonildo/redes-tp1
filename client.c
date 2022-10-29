@@ -40,11 +40,11 @@ int main(int argc, char *argv[])
 
     memset(buf, 0, BUFSZ);
     count = recv(s, buf, BUFSZ, 0);
-    if (count == 0)
+    if (count == 0 || strcmp(buf, "\0") == 0)
     {
       break; // Connection terminated
     }
-    printf("%s\n", buf);
+    printf("%s", buf);
     count = 0;
   }
 
