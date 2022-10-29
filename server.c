@@ -46,15 +46,28 @@ int main(int argc, char *argv[])
     addrtostr(caddr, caddrstr, BUFSZ);
 
     char buf[BUFSZ];
-    memset(buf, 0, BUFSZ);
-    size_t count = recv(csock, buf, BUFSZ - 1, 0);
-
-    count = send(csock, buf, strlen(buf) + 1, 0);
-    if (count != strlen(buf) + 1)
+    while (1)
     {
-      logexit("send");
+      memset(buf, 0, BUFSZ);
+      size_t count = recv(csock, buf, BUFSZ - 1, 0);
+      printf("[msg] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
+
+      char *splittedCommand = strtok(buf, " ");
+      while (splittedCommand != NULL)
+      {
+        printf("[TESTE] Next command: %s\n", splittedCommand);
+
+        // TODO: HANDLE COMMANDS
+
+        splittedCommand = strtok(NULL, " ,.-");
+      }
+
+      count = send(csock, buf, strlen(buf) + 1, 0);
+      if (count != strlen(buf) + 1)
+      {
+        logexit("send");
+      }
     }
-    close(csock);
   }
   exit(EXIT_SUCCESS);
 }
