@@ -30,7 +30,7 @@ int isValidSwitch(int switchId)
 {
   if (switchId < 1 || switchId > MAX_SWITCH_TYPES)
   {
-    printf("error switch doesn't exist\n");
+    printf("error switch type unknown\n");
     return -1;
   }
   return 1;
@@ -60,22 +60,57 @@ int endCommandHandler(char *splittedCommand)
   return 0;
 }
 
-int addHandler(char *splittedCommand)
+int addHandler(char *splittedCommand, struct rack *racks)
 {
   splittedCommand = strtok(NULL, " ,.-");
-  if (strcmp(splittedCommand, "sw") == 0)
-  {
-    splittedCommand = strtok(NULL, " ,.-");
-    int switchId = atoi(splittedCommand);
-    if (!isValidSwitch(switchId))
-      closeHandler(splittedCommand);
+  if (!strcmp(splittedCommand, "sw") == 0)
+    return closeHandler(splittedCommand);
 
-    printf("Switch %d installed", switchId);
-  }
-  else
+  int addList[RACK_SIZE_LIMIT];
+  int countAdd = 0;
+
+  splittedCommand = strtok(NULL, " ,.-");
+  while (strcmp(splittedCommand, "in") != 0 && countAdd < RACK_SIZE_LIMIT)
   {
-    closeHandler(splittedCommand);
+    addList[countAdd] = atoi(splittedCommand) - 1;
+    if (!isValidSwitch(addList[countAdd] + 1))
+      return 0;
+    countAdd++;
+
+    splittedCommand = strtok(NULL, " ,.-");
   }
+
+  splittedCommand = strtok(NULL, " ,.-");
+  int rackId = atoi(splittedCommand) - 1;
+  if (!isValidRack(rackId + 1))
+    return 0;
+
+  if (racks[rackId].switchCount + countAdd > RACK_SIZE_LIMIT)
+  {
+    printf("error rack limit exceeded");
+    return 0;
+  }
+
+  for (int i = 0; i < countAdd; i++)
+  {
+    if (racks[rackId].installedSwitches[addList[i]])
+    {
+      printf("error switch 0%d already installed in 0%d\n", addList[i] + 1, rackId + 1);
+      return 0;
+    }
+    else
+    {
+      racks[rackId].installedSwitches[addList[i]] = 1;
+      racks[rackId].switchCount++;
+    }
+  }
+
+  printf("switch ");
+  for (int i = 0; i < countAdd; i++)
+  {
+    printf("0%d ", addList[i] + 1);
+  }
+  printf("installed\n");
   return 0;
 }
 
@@ -87,8 +122,8 @@ int getHandler(char *splittedCommand, struct rack *racks)
   splittedCommand = strtok(NULL, " ,.-");
   while (strcmp(splittedCommand, "in") != 0 && countGet < MULTIPLE_SWITCH_GET)
   {
-    getList[countGet] = atoi(splittedCommand);
-    if (!isValidSwitch(getList[countGet]))
+    getList[countGet] = atoi(splittedCommand) - 1;
+    if (!isValidSwitch(getList[countGet] + 1))
       return 0;
     countGet++;
 
@@ -99,8 +134,8 @@ int getHandler(char *splittedCommand, struct rack *racks)
     return closeHandler(splittedCommand);
 
   splittedCommand = strtok(NULL, " ,.-");
-  int rackId = atoi(splittedCommand);
-  if (!isValidRack(rackId))
+  int rackId = atoi(splittedCommand) - 1;
+  if (!isValidRack(rackId + 1))
     return 0;
 
   for (int i = 0; i < countGet; i++)
@@ -122,12 +157,11 @@ int getHandler(char *splittedCommand, struct rack *racks)
 int lsHandler(char *splittedCommand, struct rack *racks)
 {
   splittedCommand = strtok(NULL, " ,.-");
-  int rackId = atoi(splittedCommand);
-  printf("%d\n", rackId);
-  if (!isValidRack(rackId))
+  int rackId = atoi(splittedCommand) - 1;
+  if (!isValidRack(rackId + 1))
     return 0;
 
-  if (racks[rackId - 1].switchCount == 0)
+  if (racks[rackId].switchCount == 0)
   {
     printf("empty rack\n");
     return 0;
@@ -136,31 +170,27 @@ int lsHandler(char *splittedCommand, struct rack *racks)
   for (int i = 0; i < MAX_SWITCH_TYPES; i++)
   {
     int found = 0;
-    if (racks[rackId - 1].installedSwitches[i])
+    if (racks[rackId].installedSwitches[i])
     {
       found++;
       printf("0%d", i + 1);
-      if (found != racks[rackId - 1].switchCount)
+      if (found != racks[rackId].switchCount)
       {
         printf(" ");
       }
-      else
-      {
-        printf("\n");
-      }
     }
   }
+  printf("\n");
   return endCommandHandler(splittedCommand);
 }
 
 int handleCommands(char *buf, struct rack *racks)
 {
   char *splittedCommand = strtok(buf, " ");
-  printf("[TESTE] Next command: %s\n", splittedCommand);
 
   if (strcmp(splittedCommand, "add") == 0)
   {
-    return addHandler(splittedCommand);
+    return addHandler(splittedCommand, racks);
   }
   else if (strcmp(splittedCommand, "rm") == 0)
   {
