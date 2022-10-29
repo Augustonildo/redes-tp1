@@ -21,7 +21,7 @@ int isValidRack(int rackId)
   if (rackId < 1 || rackId > MAX_RACK_NUMBER)
   {
     printf("error rack doesn't exist\n");
-    return -1;
+    return 0;
   }
   return 1;
 }
@@ -31,7 +31,7 @@ int isValidSwitch(int switchId)
   if (switchId < 1 || switchId > MAX_SWITCH_TYPES)
   {
     printf("error switch type unknown\n");
-    return -1;
+    return 0;
   }
   return 1;
 }
@@ -70,8 +70,14 @@ int addHandler(char *splittedCommand, struct rack *racks)
   int countAdd = 0;
 
   splittedCommand = strtok(NULL, " ");
-  while (strcmp(splittedCommand, "in") != 0 && countAdd < RACK_SIZE_LIMIT)
+  while (strcmp(splittedCommand, "in") != 0)
   {
+    if (countAdd >= RACK_SIZE_LIMIT)
+    {
+      printf("error rack limit exceeded\n");
+      return 0;
+    }
+
     addList[countAdd] = atoi(splittedCommand) - 1;
     if (!isValidSwitch(addList[countAdd] + 1))
       return 0;
